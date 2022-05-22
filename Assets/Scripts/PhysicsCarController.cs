@@ -4,17 +4,19 @@ using UnityEngine;
 
 public class PhysicsCarController : MonoBehaviour
 {
+    [Header("Miscellaneous")]
+    [SerializeField] LayerMask track;
+
     [Header("Forces")]
     [SerializeField] Vector3 tractionForce, dragForce, rollResistForce, longForce;
-    [SerializeField] Vector3 brakingForce, maxForce, driveForce, lateralForce, totalForce;
-    [SerializeField] Vector3 corneringForce, latRearForce, latFrontForce, centripedalForce;
+    [SerializeField] int liftForce, flipForce;
+    [SerializeField] Vector3 maxForce, driveForce, lateralForce, totalForce;
     [SerializeField] float enginePower, userForward, userRight;
     [SerializeField] Vector3 frontWeight, backWeight;
-    [SerializeField] Vector3 rearTorque, frontTorque, totalTorque;
     
 
     [Header("Constants")]
-    [SerializeField] float dragConstant, rollResistConstant, brakingConstant;
+    [SerializeField] float dragConstant, rollResistConstant;
     [SerializeField] float corneringStiffness;
     [SerializeField] float tyreFrictionCoefficient = 1.5f;
     [SerializeField] float constMultiplier = 30f;
@@ -30,7 +32,6 @@ public class PhysicsCarController : MonoBehaviour
     [SerializeField] Transform[] wheels;
     [SerializeField] Rigidbody[] rb_wheels;
     [SerializeField] float c, b, L, R, h, steeringRadius, rearSlipAngle, frontSlipAngle, sideSlipAngle, alpha;
-    [SerializeField] Vector3 latVelocity, longVelocity;
     [SerializeField] float maxSteer;
 
     //Use Wheelhit.sidewaysslip for the sideslip
@@ -71,6 +72,12 @@ public class PhysicsCarController : MonoBehaviour
             GetCollider(0).steerAngle = userRight;
             GetCollider(1).steerAngle = userRight;
 
+        //Flips the car when it falls upside-down
+        if (Input.GetKeyDown(KeyCode.T))
+        {
+            rb.AddForce(0,liftForce,0);
+            rb.AddRelativeTorque(new Vector3(0,0,flipForce));
+        }
     }
 
     private void FixedUpdate()
@@ -99,16 +106,6 @@ public class PhysicsCarController : MonoBehaviour
 
         maxForce = tyreFrictionCoefficient * weight;
 
-
-        if (Input.GetKey(KeyCode.Space))
-        {
-            brakingForce = -carTransform.forward.normalized * brakingConstant;
-            if(rb.velocity.magnitude > 0)
-            {
-                rb.AddForce(brakingForce);
-            }
-        }
-
         
         //Here, all of the longitudinal (forward) forces are totalled
 
@@ -118,72 +115,12 @@ public class PhysicsCarController : MonoBehaviour
             velocity and therefore resistive forces to also increase up to a point where they cancel
             out. This is the top speed for a certain engine power
         */
-        if (Physics.Raycast(downRay, out hit))
+        //Raycast only works for calculating mass. Can somehow still fly in the sky. What is this?
+        if (Physics.CheckSphere(rb.transform.position, 1f, track))
         {
             rb.AddForce(longForce);
         }
-
-    
-        ////This section relates to low-speed cornering, not really useful for drifting
-        //    //This will determine the circle radius related to turning, in effect, calculating how much we turn
-        //    R = L / Mathf.Sin(userRight);
-
-        ////This section covers high-speed turning
-        //    //This relates to the car
-        //        //sideSlipAngle = Vector3.Angle(carTransform.forward, rb.velocity);
-        //        sideSlipAngle = Mathf.Atan(rb.velocity.z / rb.velocity.x);
-
-        ////This relates to the wheels
-        //for(int i = 0; i < 4; i++)
-        //{
-        //    //alpha represents the slip angle for each wheel
-        //    alpha = Vector3.Angle(wheels[i].forward, rb.velocity) - 90f;
-
-        //    //These values are supposed to represent the magnitudes of these velocities
-        //    longVelocity = Mathf.Cos(alpha) * rb.velocity;
-        //    latVelocity = Mathf.Sin(alpha) * rb.velocity;
-
-        //    /*
-        //        Remember that these forces are supposed to be acting upon the wheels themselves,
-        //        so add rigidbodies accordingly if that works out
-        //     */
-
-        //    //The lateral velocity causes the cornering force to counteract it
-        //        //This relates to only the front wheels
-        //        frontSlipAngle = Mathf.Atan((latVelocity.magnitude + (rb.angularVelocity.magnitude * b)) / longVelocity.magnitude) - (userRight * Mathf.Sign(longVelocity.magnitude));
-        //        for (i = 0; i < 2; i++)
-        //        {
-        //            //Calculates the lateral force of the wheels
-        //            latFrontForce = lateralForce.normalized * (frontWeight.magnitude / 2f);
-
-        //            corneringForce = latRearForce + Mathf.Cos(userRight) * latFrontForce;
-        //            lateralForce += latFrontForce;
-
-        //            frontTorque = Mathf.Cos(userRight) * latFrontForce * b;
-        //            //rb_wheels[i].AddForce(lateralForce);
-        //        }
-
-        //        centripedalForce = corneringForce;
-        //        steeringRadius = centripedalForce.magnitude / (rb.mass * Mathf.Pow(rb.velocity.magnitude, 2f));
-
-        //    lateralForce = new Vector3(0f, 0f, 0f);
-        //    //This relates to only the rear wheels
-        //    rearSlipAngle = Mathf.Atan((latVelocity.magnitude - (rb.angularVelocity.magnitude * c)) / longVelocity.magnitude);
-        //    for (i = 2; i < 4; i++)
-        //    {
-        //        //Calculates the lateral force of the wheels
-        //        latRearForce = lateralForce.normalized * (backWeight.magnitude / 2f);
-
-        //        lateralForce += latRearForce;
-
-        //        rearTorque = -latRearForce * c;
-        //        //rb_wheels[i].AddForce(lateralForce);
-        //    }
-
-        //}
-
-        //totalTorque = frontTorque + rearTorque;
-        //rb.AddTorque(totalTorque);
     
     }
+
 }
